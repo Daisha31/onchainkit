@@ -3,22 +3,23 @@ import { formatUnits } from 'viem';
 import type { Address } from 'viem';
 import { useBalance } from 'wagmi';
 import type { UseBalanceReturnType } from 'wagmi';
-import { getRoundedAmount } from '../../internal/utils/getRoundedAmount';
+import { getRoundedAmount } from '../../core/utils/getRoundedAmount';
 import type { SwapError } from '../../swap';
 import { getSwapErrorCode } from '../../swap/utils/getSwapErrorCode';
 import type { UseGetETHBalanceResponse } from '../types';
 
 const ETH_DECIMALS = 18;
 
-export function useGetETHBalance(address: Address): UseGetETHBalanceResponse {
+export function useGetETHBalance(address?: Address): UseGetETHBalanceResponse {
   const ethBalanceResponse: UseBalanceReturnType = useBalance({ address });
 
   return useMemo(() => {
     let error: SwapError | undefined;
     if (ethBalanceResponse?.error) {
       error = {
-        error: ethBalanceResponse?.error?.message,
         code: getSwapErrorCode('balance'),
+        error: ethBalanceResponse?.error?.message,
+        message: '',
       };
     }
     if (

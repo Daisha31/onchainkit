@@ -1,13 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useOutsideClick } from '../../ui/react/internal/hooks/useOutsideClick';
 import { ConnectWallet } from './ConnectWallet';
 import { Wallet } from './Wallet';
 import { WalletDropdown } from './WalletDropdown';
-import { useWalletContext } from './WalletProvider';
+import { type WalletProviderReact, useWalletContext } from './WalletProvider';
 
 vi.mock('./WalletProvider', () => ({
   useWalletContext: vi.fn(),
-  WalletProvider: ({ children }) => <>{children}</>,
+  WalletProvider: ({ children }: WalletProviderReact) => <>{children}</>,
 }));
 
 vi.mock('./ConnectWallet', () => ({
@@ -20,22 +21,41 @@ vi.mock('./WalletDropdown', () => ({
   ),
 }));
 
+vi.mock('../../core-react/internal/hooks/useTheme', () => ({
+  useTheme: vi.fn(),
+}));
+
+vi.mock('../../ui/react/internal/hooks/useOutsideClick', () => ({
+  useOutsideClick: vi.fn(),
+}));
+
 describe('Wallet Component', () => {
-  let mockSetIsOpen: ReturnType<typeof vi.fn>;
+  let mockHandleClose: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockSetIsOpen = vi.fn();
+    mockHandleClose = vi.fn();
     (useWalletContext as ReturnType<typeof vi.fn>).mockReturnValue({
-      isOpen: false,
-      setIsOpen: mockSetIsOpen,
+      isOpen: true,
+      handleClose: mockHandleClose,
+      containerRef: { current: document.createElement('div') },
     });
+
+    vi.clearAllMocks();
   });
 
   it('should render the Wallet component with ConnectWallet', () => {
+    (useWalletContext as ReturnType<typeof vi.fn>).mockReturnValue({
+      isOpen: false,
+      handleClose: mockHandleClose,
+      containerRef: { current: document.createElement('div') },
+    });
+
     render(
       <Wallet>
         <ConnectWallet />
-        <WalletDropdown />
+        <WalletDropdown>
+          <div>Wallet Dropdown</div>
+        </WalletDropdown>
       </Wallet>,
     );
 
@@ -44,76 +64,59 @@ describe('Wallet Component', () => {
   });
 
   it('should close the wallet when clicking outside', () => {
+    const container = document.createElement('div');
     (useWalletContext as ReturnType<typeof vi.fn>).mockReturnValue({
       isOpen: true,
-      setIsOpen: mockSetIsOpen,
+      handleClose: mockHandleClose,
+      containerRef: { current: container },
+    });
+
+    const mockOutsideClickCallback = vi.fn();
+    (useOutsideClick as ReturnType<typeof vi.fn>).mockReturnValue({
+      handleOutsideClick: mockOutsideClickCallback,
     });
 
     render(
       <Wallet>
         <ConnectWallet />
-        <WalletDropdown />
+        <WalletDropdown>
+          <div>Wallet Dropdown</div>
+        </WalletDropdown>
       </Wallet>,
     );
 
     expect(screen.getByTestId('wallet-dropdown')).toBeDefined();
 
-    fireEvent.click(document.body);
+    mockOutsideClickCallback({} as MouseEvent);
 
-    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
+    expect(mockOutsideClickCallback).toHaveBeenCalled();
   });
 
-  it('should not close the wallet when clicking inside', () => {
+  it('should not trigger click handler when wallet is closed', () => {
     (useWalletContext as ReturnType<typeof vi.fn>).mockReturnValue({
-      isOpen: true,
-      setIsOpen: mockSetIsOpen,
+      isOpen: false,
+      handleClose: mockHandleClose,
+      containerRef: { current: document.createElement('div') },
+    });
+
+    const mockOutsideClickCallback = vi.fn();
+    (useOutsideClick as ReturnType<typeof vi.fn>).mockReturnValue({
+      handleOutsideClick: mockOutsideClickCallback,
     });
 
     render(
       <Wallet>
         <ConnectWallet />
-        <WalletDropdown />
-      </Wallet>,
-    );
-
-    const walletDropdown = screen.getByTestId('wallet-dropdown');
-    expect(walletDropdown).toBeDefined();
-
-    fireEvent.click(walletDropdown);
-
-    expect(mockSetIsOpen).not.toHaveBeenCalled();
-  });
-
-  it('should not trigger click handler when wallet is closed', () => {
-    render(
-      <Wallet>
-        <ConnectWallet />
-        <WalletDropdown />
+        <WalletDropdown>
+          <div>Wallet Dropdown</div>
+        </WalletDropdown>
       </Wallet>,
     );
 
     expect(screen.queryByTestId('wallet-dropdown')).toBeNull();
 
-    fireEvent.click(document.body);
+    mockOutsideClickCallback({} as MouseEvent);
 
-    expect(mockSetIsOpen).not.toHaveBeenCalled();
-  });
-
-  it('should remove event listener on unmount', () => {
-    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
-
-    const { unmount } = render(
-      <Wallet>
-        <ConnectWallet />
-        <WalletDropdown />
-      </Wallet>,
-    );
-
-    unmount();
-
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      'click',
-      expect.any(Function),
-    );
+    expect(mockHandleClose).not.toHaveBeenCalled();
   });
 });

@@ -3,21 +3,21 @@ import { erc20Abi, formatUnits } from 'viem';
 import type { Address } from 'viem';
 import { useReadContract } from 'wagmi';
 import type { UseReadContractReturnType } from 'wagmi';
-import { getRoundedAmount } from '../../internal/utils/getRoundedAmount';
+import { getRoundedAmount } from '../../core/utils/getRoundedAmount';
 import type { SwapError } from '../../swap';
 import { getSwapErrorCode } from '../../swap/utils/getSwapErrorCode';
 import type { Token } from '../../token';
 import type { UseGetTokenBalanceResponse } from '../types';
 
 export function useGetTokenBalance(
-  address: Address,
+  address?: Address,
   token?: Token,
 ): UseGetTokenBalanceResponse {
   const tokenBalanceResponse: UseReadContractReturnType = useReadContract({
     abi: erc20Abi,
     address: token?.address as Address,
     functionName: 'balanceOf',
-    args: [address],
+    args: address ? [address] : [],
     query: {
       enabled: !!token?.address && !!address,
     },
@@ -26,8 +26,9 @@ export function useGetTokenBalance(
     let error: SwapError | undefined;
     if (tokenBalanceResponse?.error) {
       error = {
-        error: tokenBalanceResponse?.error?.shortMessage,
         code: getSwapErrorCode('balance'),
+        error: tokenBalanceResponse?.error?.shortMessage,
+        message: '',
       };
     }
     if (
