@@ -1,19 +1,19 @@
 import { base, baseSepolia, mainnet, optimism } from 'viem/chains';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { publicClient } from '../../network/client';
-import { getChainPublicClient } from '../../network/getChainPublicClient';
+import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
+import { publicClient } from '../../core/network/client';
+import { getChainPublicClient } from '../../core/network/getChainPublicClient';
 import { RESOLVER_ADDRESSES_BY_CHAIN_ID } from '../constants';
 import { getAvatar } from './getAvatar';
 
-vi.mock('../../network/client');
+vi.mock('@/core/network/client');
 
-vi.mock('../../network/getChainPublicClient', () => ({
-  ...vi.importActual('../../network/getChainPublicClient'),
+vi.mock('@/core/network/getChainPublicClient', () => ({
+  ...vi.importActual('@/core/network/getChainPublicClient'),
   getChainPublicClient: vi.fn(() => publicClient),
 }));
 
 describe('getAvatar', () => {
-  const mockGetEnsAvatar = publicClient.getEnsAvatar as vi.Mock;
+  const mockGetEnsAvatar = publicClient.getEnsAvatar as Mock;
   beforeEach(() => {
     vi.clearAllMocks();
   });

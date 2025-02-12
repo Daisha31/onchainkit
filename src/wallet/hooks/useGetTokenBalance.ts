@@ -10,24 +10,26 @@ import type { Token } from '../../token';
 import type { UseGetTokenBalanceResponse } from '../types';
 
 export function useGetTokenBalance(
-  address: Address,
+  address?: Address,
   token?: Token,
 ): UseGetTokenBalanceResponse {
   const tokenBalanceResponse: UseReadContractReturnType = useReadContract({
     abi: erc20Abi,
     address: token?.address as Address,
     functionName: 'balanceOf',
-    args: [address],
+    args: address ? [address] : [],
     query: {
       enabled: !!token?.address && !!address,
     },
   });
+
   return useMemo(() => {
     let error: SwapError | undefined;
     if (tokenBalanceResponse?.error) {
       error = {
-        error: tokenBalanceResponse?.error?.shortMessage,
         code: getSwapErrorCode('balance'),
+        error: tokenBalanceResponse?.error?.shortMessage,
+        message: '',
       };
     }
     if (
@@ -36,9 +38,11 @@ export function useGetTokenBalance(
     ) {
       return {
         convertedBalance: '',
+        status: tokenBalanceResponse.status,
         error,
         roundedBalance: '',
         response: tokenBalanceResponse,
+        refetch: tokenBalanceResponse.refetch,
       };
     }
     const convertedBalance = formatUnits(
@@ -47,9 +51,11 @@ export function useGetTokenBalance(
     );
     return {
       convertedBalance,
+      status: tokenBalanceResponse.status,
       error,
       response: tokenBalanceResponse,
       roundedBalance: getRoundedAmount(convertedBalance, 8),
+      refetch: tokenBalanceResponse.refetch,
     };
   }, [token, tokenBalanceResponse]);
 }
